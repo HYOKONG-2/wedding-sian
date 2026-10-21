@@ -195,6 +195,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .slot-add{font-size:11.5px;color:#8FA2B5;pointer-events:none;text-align:center;padding:0 6px}
 .slot:hover,.slot:focus-visible{border-color:var(--blue)}
 .slot:hover .slot-add{color:var(--blue-d)}
+.slot:hover:not(.filled) .slot-add::after{content:var(--paste-hint);display:block;margin-top:4px;font-size:10.5px;color:var(--blue-l)}
 .slot.filled{border:0}
 .slot.filled .slot-add{display:none}
 .slot.drag{border:1.5px dashed var(--blue);background-color:var(--mist)}
@@ -258,6 +259,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .modal h3{font-size:20px;font-weight:700;margin:0 0 4px;color:var(--ink);letter-spacing:-.03em}
 .m-hint{margin:0 0 18px;font-size:13.5px;color:var(--muted)}
 .m-acts{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 4px}
+.m-note{margin:10px 0 0;font-size:12.5px;color:var(--muted)}
 .m-sub{margin:22px 0 10px;font-size:13px;font-weight:600;color:var(--ink)}
 .m-sub.muted{font-weight:400;color:var(--muted);line-height:1.6}
 .m-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
@@ -387,7 +389,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 
 <!-- 시안 만들기 -->
 <main class="view" id="view-make" hidden>
-  <p class="make-tip no-print"><b>사진 칸</b>을 누르면 사진을 넣을 수 있고, 회색 글씨 자리는 눌러서 바로 입력하면 돼요. 페이지를 누른 뒤 <b>+ 시안 페이지 추가</b>를 누르면 그 페이지 바로 뒤에 새 페이지가 생겨요. 작성한 내용은 이 기기에 자동 저장돼요.</p>
+  <p class="make-tip no-print"><b>사진 칸</b>을 누르면 사진을 넣을 수 있어요. 복사한 사진은 칸 위에 마우스를 올리고 <b><span class="mod-key">Ctrl</span>+V</b>로 붙여넣으면 돼요. 회색 글씨 자리는 눌러서 바로 입력하면 돼요. 페이지를 누른 뒤 <b>+ 시안 페이지 추가</b>를 누르면 그 페이지 바로 뒤에 새 페이지가 생겨요. 작성한 내용은 이 기기에 자동 저장돼요.</p>
   <div class="pages" id="pages"></div>
   <div class="make-foot no-print"><button type="button" class="add-big" id="btnAdd2">+ 시안 페이지 추가</button><button type="button" class="btn solid save-big" id="btnPdf2">PDF로 저장</button></div>
   <footer class="credit credit-text no-print"></footer>
@@ -419,7 +421,7 @@ const CONFIG = {
   coverMark: 'wedding concept book',      // 표지 오른쪽 위 작은 글씨
   credit: '사진 출처: 핀터레스트, 인스타그램 · 문제가 있는 사진은 알려주시면 바로 내릴게요',
   pdfName: '웨딩촬영시안',                // 저장되는 PDF 파일 이름 앞부분
-  netlifyImages: true,                    // Netlify 이미지 최적화로 시안 사진을 빠르게 불러오기
+  netlifyImages: false,                   // Netlify에 올릴 때만 true (Cloudflare Pages에서는 false)
 };
 
 const W = 1122, H = 793;                  // A4 가로 (96dpi 기준)
@@ -1110,7 +1112,7 @@ function pageAction(pid, act) {
 /* ── 창 (모달) ── */
 const modal = $('#modal');
 function openModal(html) { $('#modalBody').innerHTML = html; modal.hidden = false; document.body.classList.add('noscroll'); }
-function closeModal() { modal.hidden = true; document.body.classList.remove('noscroll'); $('#modalBody').innerHTML = ''; }
+function closeModal() { modalSlot = null; modal.hidden = true; document.body.classList.remove('noscroll'); $('#modalBody').innerHTML = ''; }
 modal.addEventListener('click', (e) => { if (e.target === modal || e.target.closest('.modal-x')) closeModal(); });
 
 /* 사진 칸을 눌렀을 때 */
@@ -1119,7 +1121,9 @@ function openSlot(pid, key) {
   const p = getPage(pid); if (!p) return;
   const cur = p.slots[key];
   const sel = selList();
-  if (!cur && !sel.length) { pickFile(pid, key); return; }
+  armedSlot = { pid, key };
+  if (!cur && !sel.length && !TOUCH) { pickFile(pid, key); return; }
+  modalSlot = { pid, key };
   const used = usedUrls();
   const slotEl = $(`.slot[data-slot="${key}"]`, pageEl(pid));
   openModal(`<h3>${cur ? '사진 조절' : '사진 넣기'}</h3>
@@ -1134,8 +1138,10 @@ function openSlot(pid, key) {
     <div class="m-acts">
       ${cur ? '<button type="button" class="btn solid" data-m="done">완료</button>' : ''}
       <button type="button" class="btn${cur ? '' : ' solid'}" data-m="file">${cur ? '다른 사진으로 바꾸기' : '내 기기에서 사진 고르기'}</button>
+      <button type="button" class="btn" data-m="paste">복사한 사진 붙여넣기</button>
       ${cur ? '<button type="button" class="btn ghost" data-m="remove">사진 빼기</button>' : ''}
     </div>
+    ${TOUCH ? '' : `<p class="m-note">이 창이 열린 상태에서 ${MOD}+V를 눌러도 붙여넣어져요.</p>`}
     ${sel.length
       ? `<p class="m-sub">${cur ? '♥ 내가 선택한 시안으로 바꾸기' : '♥ 내가 선택한 시안에서 고르기'}</p><div class="m-grid">${sel.map((s) => `<button type="button" class="m-ph${used.has(s) ? ' used' : ''}" data-src="${esc(s)}"><img src="${imgUrl(s, 300)}" data-orig="${esc(s)}" alt="" loading="lazy"></button>`).join('')}</div>`
       : `<p class="m-sub muted">시안 모아보기에서 ♥를 누른 사진은 여기서 바로 고를 수 있어요.</p>`}`);
@@ -1145,6 +1151,7 @@ function openSlot(pid, key) {
     const m = b.dataset.m;
     if (m === 'contain' || m === 'cover' || m === 'center') { adj && adj.then((f) => f && f(m)); return; }
     if (m === 'done') { closeModal(); return; }
+    if (m === 'paste') { pasteFromClipboard(pid, key); return; }
     if (m === 'file') { closeModal(); pickFile(pid, key); }
     else if (m === 'remove') { closeModal(); setSlot(pid, key, null); gc(); }
     else if (b.dataset.src) { closeModal(); setSlot(pid, key, { t: 'url', src: b.dataset.src }); gc(); }
@@ -1228,6 +1235,63 @@ async function setupAdjust(pid, key, slotEl) {
     if (mode === 'center') { s.x = 50; s.y = 50; }
     apply();
   };
+}
+
+/* ── 복사한 사진 붙여넣기 ── */
+const TOUCH = matchMedia('(hover: none)').matches;
+const MOD = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? 'Cmd' : 'Ctrl';
+document.documentElement.style.setProperty('--paste-hint', `"${MOD}+V 붙여넣기"`);
+$$('.mod-key').forEach((e) => (e.textContent = MOD));
+let modalSlot = null, hoverSlot = null, focusSlot = null, armedSlot = null;
+const slotRef = (sl) => (sl ? { pid: pidOf(sl), key: sl.dataset.slot } : null);
+pagesEl.addEventListener('mouseover', (e) => { hoverSlot = slotRef(e.target.closest('.slot')); });
+pagesEl.addEventListener('mouseleave', () => { hoverSlot = null; });
+pagesEl.addEventListener('focusin', (e) => { const sl = e.target.closest('.slot'); if (sl) focusSlot = slotRef(sl); });
+pagesEl.addEventListener('focusout', (e) => { if (e.target.closest && e.target.closest('.slot')) focusSlot = null; });
+
+function firstEmptySlot(pid) {
+  const p = getPage(pid), el = pageEl(pid);
+  if (!p || !el) return null;
+  const sl = $$('.slot', el).find((x) => !p.slots[x.dataset.slot]);
+  return sl ? slotRef(sl) : null;
+}
+function pasteTarget() {
+  const t = modalSlot || hoverSlot || focusSlot || armedSlot || (selPid && firstEmptySlot(selPid));
+  return t && getPage(t.pid) ? t : null;
+}
+document.addEventListener('paste', (e) => {
+  if (currentView() !== 'make' || !e.clipboardData) return;
+  const files = Array.from(e.clipboardData.files || []).filter((f) => /^image\//.test(f.type));
+  if (!files.length) return;                                   // 글자 붙여넣기는 그대로
+  const inText = e.target.closest && e.target.closest('.ed');
+  if (inText && (e.clipboardData.getData('text/plain') || '').trim()) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const t = pasteTarget();
+  if (!t) { toast('사진을 넣을 칸 위에 마우스를 올리고 다시 붙여넣어 주세요.'); return; }
+  if (modalSlot) closeModal();
+  handleFiles(files, t.pid, t.key);
+}, true);
+
+async function pasteFromClipboard(pid, key) {
+  if (!navigator.clipboard || !navigator.clipboard.read) {
+    toast(`이 브라우저에서는 버튼으로 붙여넣을 수 없어요. ${MOD}+V를 눌러 주세요.`);
+    return;
+  }
+  try {
+    const items = await navigator.clipboard.read();
+    for (const it of items) {
+      const type = it.types.find((t) => t.startsWith('image/'));
+      if (!type) continue;
+      const blob = await it.getType(type);
+      closeModal();
+      await handleFiles([new File([blob], 'paste.' + type.split('/')[1], { type })], pid, key);
+      return;
+    }
+    toast('복사한 사진이 없어요. 사진을 먼저 복사해 주세요.');
+  } catch (err) {
+    toast(`붙여넣기를 허용하지 않았어요. ${TOUCH ? '다시 눌러서 허용해 주세요.' : MOD + '+V를 눌러 주세요.'}`);
+  }
 }
 
 /* 페이지 추가 */
