@@ -145,6 +145,28 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 @media (max-width:680px){.lbx{padding-left:10px;padding-right:10px}.lbx-nav{display:none}}
 
 /* ── 시안 만들기 ── */
+.guide{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:28px 56px;margin-top:72px;padding-top:40px;border-top:1px solid var(--line)}
+.guide-h{font-size:22px;font-weight:700;color:var(--ink);letter-spacing:-.03em;margin:0 0 16px}
+.checks{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.checks li{position:relative;padding:12px 14px 12px 44px;background:var(--mist-2);border:1px solid var(--line);border-radius:8px;font-size:14.5px;color:var(--text);line-height:1.55}
+.checks li::before{content:"";position:absolute;left:14px;top:50%;width:18px;height:18px;margin-top:-9px;border-radius:50%;background:var(--blue) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.4l2.6 2.5L12 5.6' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat}
+.checks small{color:var(--muted);font-size:12.5px}
+.guide-lead{margin:0 0 10px;font-size:14.5px;line-height:1.7;color:var(--text)}
+.guide-lead b{color:var(--ink)}
+.dots{margin:0 0 22px;padding:0 0 0 18px;display:grid;gap:6px;font-size:13.5px;line-height:1.65;color:var(--muted)}
+.dots li::marker{color:var(--blue)}
+.guide-dl{margin:0 0 18px;display:grid;gap:4px}
+.guide-dl dt{font-size:14px;font-weight:700;color:var(--blue-d);margin-top:8px}
+.guide-dl dd{margin:0;font-size:13.5px;line-height:1.7;color:var(--text)}
+.guide-dl code{font-family:inherit;font-size:12.5px;background:var(--mist);padding:1px 6px;border-radius:4px;color:var(--ink);word-break:break-all}
+.guide-note{margin:0;padding:12px 14px;border-radius:8px;background:var(--mist);font-size:14px;color:var(--ink)}
+.make-guide{max-width:1240px;margin:12px auto 0;padding:0 32px}
+.make-guide summary{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--blue-d);list-style:none;padding:8px 14px;border:1px solid var(--sky-line);border-radius:8px;background:#fff}
+.make-guide summary::-webkit-details-marker{display:none}
+.make-guide summary::after{content:"+";font-weight:400;font-size:16px;line-height:1}
+.make-guide[open] summary::after{content:"−"}
+.make-guide .guide{margin-top:16px;padding:26px 28px;border:1px solid var(--line);border-radius:10px;background:#fff}
+@media (max-width:760px){.guide{grid-template-columns:1fr;margin-top:52px}.make-guide{padding:0 12px}.make-guide .guide{padding:20px 16px}}
 .make-tip{max-width:1240px;margin:0 auto;padding:24px 32px 0;color:var(--muted);font-size:13.5px;line-height:1.75;max-width:1240px}
 .make-tip b{color:var(--blue-d);font-weight:600}
 .pages{max-width:1240px;margin:0 auto;padding:20px 32px 10px;--s:1}
@@ -381,6 +403,7 @@ body.photo-dragging .slot-add::after{content:none!important}
         <p>사진을 넣고 정보를 적으면 A4 가로 시안북이 완성돼요. PDF로 바로 저장할 수 있어요.</p>
       </a>
     </div>
+    <section class="guide guide-slot" aria-label="이용 방법과 저장 안내"></section>
   </section>
   <footer class="credit credit-text"></footer>
 </main>
@@ -405,6 +428,7 @@ body.photo-dragging .slot-add::after{content:none!important}
 <!-- 시안 만들기 -->
 <main class="view" id="view-make" hidden>
   <p class="make-tip no-print"><b>사진 칸</b>을 누르면 사진을 넣을 수 있어요. 복사한 사진은 칸 위에 마우스를 올리고 <b><span class="mod-key">Ctrl</span>+V</b>로 붙여넣으면 돼요. 넣은 사진은 <b>끌어서 다른 칸으로</b> 옮길 수 있어요. 회색 글씨 자리는 눌러서 바로 입력하면 돼요. 페이지를 누른 뒤 <b>+ 시안 페이지 추가</b>를 누르면 그 페이지 바로 뒤에 새 페이지가 생겨요. 작성한 내용은 이 기기·이 브라우저에 자동 저장돼서 창을 닫아도 그대로 남아요. 다른 기기에서 이어 하거나 따로 보관하고 싶으면 <b>작업 파일</b>로 저장해 두세요.</p>
+  <details class="make-guide no-print"><summary>이용 방법 · 저장 안내 보기</summary><div class="guide guide-slot"></div></details>
   <div class="pages" id="pages"></div>
   <div class="make-foot no-print"><button type="button" class="add-big" id="btnAdd2">+ 시안 페이지 추가</button><button type="button" class="btn solid save-big" id="btnPdf2">PDF로 저장</button></div>
   <footer class="credit credit-text no-print"></footer>
@@ -1594,16 +1618,20 @@ async function exportPDF() {
       const clone = sheets[i].cloneNode(true);
       holder.appendChild(clone);
       const canvas = await window.html2canvas(clone, {
-        scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false, imageTimeout: 20000,
+        scale: TOUCH ? 1.6 : 2, backgroundColor: '#ffffff', useCORS: true, logging: false, imageTimeout: 20000,
         width: W, height: H, windowWidth: Math.max(W, document.documentElement.clientWidth), scrollX: 0, scrollY: 0,
+        // 아이폰(사파리)은 화면의 모든 사진이 불러와질 때까지 기다려서 멈출 수 있어요.
+        // PDF로 만들 페이지만 남기고 나머지(시안 보기 사진 등)는 빼고 그려요.
+        ignoreElements: (el) => !(holder.contains(el) || el.contains(holder) || document.head.contains(el)),
       });
       if (i > 0) pdf.addPage('a4', 'landscape');
       pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 297, 210, undefined, 'FAST');
       await new Promise((r) => setTimeout(r, 20));
     }
     const names = [doc.meta.groom, doc.meta.bride].filter(Boolean).join('_');
-    pdf.save(`${CONFIG.pdfName}${names ? '_' + names : ''}.pdf`.replace(/[\\/:*?"<>|]/g, ''));
-    toast('PDF로 저장했어요.');
+    const fname = `${CONFIG.pdfName}${names ? '_' + names : ''}.pdf`.replace(/[\\/:*?"<>|]/g, '');
+    if (TOUCH) pdfReady(pdf.output('blob'), fname);
+    else { pdf.save(fname); toast('PDF로 저장했어요.'); }
   } catch (e) {
     console.error(e);
     toast('PDF를 만들지 못했어요. 잠시 후 다시 눌러 주세요.');
@@ -1613,6 +1641,66 @@ async function exportPDF() {
     busy.hidden = true;
   }
 }
+
+/* 휴대폰: PDF가 다 만들어지면 버튼을 한 번 더 눌러 저장 (공유 창 → 파일에 저장) */
+const IN_APP = /KAKAOTALK|Instagram|FBAN|FBAV|NAVER\(inapp/i.test(navigator.userAgent);
+function pdfReady(blob, fname) {
+  const url = URL.createObjectURL(blob);
+  openModal(`<h3>PDF가 준비됐어요</h3>
+    <p class="m-hint">아래 버튼을 누르면 저장할 곳을 고를 수 있어요. 아이폰은 <b>파일에 저장</b>, 안드로이드는 <b>내 파일</b>이나 <b>드라이브</b>를 고르면 돼요.</p>
+    <div class="work-acts">
+      <button type="button" class="btn solid" data-p="save">PDF 저장하기</button>
+      <button type="button" class="btn" data-p="open">새 창에서 열기</button>
+    </div>
+    ${IN_APP ? `<div class="work-list">카카오톡 같은 앱 안에서는 저장이 안 될 수 있어요. 오른쪽 아래(또는 위) <b>⋯</b> 메뉴에서 <b>다른 브라우저로 열기</b>를 누른 뒤, 사파리나 크롬에서 다시 저장해 주세요. 지금까지 만든 내용을 옮기려면 먼저 <b>작업 파일</b>로 저장해 두세요.</div>` : ''}`);
+  $('#modalBody').onclick = async (e) => {
+    const b = e.target.closest('[data-p]'); if (!b) return;
+    if (b.dataset.p === 'open') { window.open(url, '_blank'); return; }
+    const file = new File([blob], fname, { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: fname }); return; }
+      catch (err) { if (err && err.name === 'AbortError') return; }
+    }
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+}
+
+/* ── 이용 방법 · 저장 안내 ── */
+const GUIDE_HTML = `
+  <div class="guide-col">
+    <h2 class="guide-h">이용 방법</h2>
+    <ul class="checks">
+      <li>'시안 모아보기'의 참고 사진을 바로 첨부할 수 있어요 <small>(지속 업데이트 예정)</small></li>
+      <li>개인이 가진 사진도 자유롭게 첨부할 수 있어요</li>
+      <li>PC에서는 이미지를 복사해서 붙여넣을 수 있어요</li>
+      <li>사진 순서와 위치를 자유롭게 옮길 수 있어요</li>
+      <li>PC와 모바일 모두 이용할 수 있어요</li>
+    </ul>
+  </div>
+  <div class="guide-col">
+    <h2 class="guide-h">저장 안내</h2>
+    <p class="guide-lead"><b>작성한 내용은 자동 저장돼요.</b> 창을 닫아도 같은 기기, 같은 브라우저에서 다시 열면 그대로 남아 있어요.</p>
+    <ul class="dots">
+      <li>휴대폰에서 만들다가 PC로 열면 보이지 않아요. (다른 기기에서는 이어지지 않아요)</li>
+      <li>브라우저 기록이나 사이트 데이터를 지우면 작성한 내용도 함께 지워져요.</li>
+      <li>시크릿 모드(사생활 보호 모드)에서는 창을 닫으면 사라져요.</li>
+      <li>카카오톡 안에서 링크를 열면 카톡 안에 저장돼요. 나중에 크롬이나 사파리로 열면 안 보일 수 있어요.</li>
+    </ul>
+    <p class="guide-lead"><b>다른 기기에서 이어서 하려면 '작업 파일'</b>을 이용해 주세요. 시안 만들기 화면 위쪽의 <b>작업 파일</b> 버튼에 있어요.</p>
+    <dl class="guide-dl">
+      <dt>작업 파일 저장하기</dt>
+      <dd>지금까지 만든 걸 파일 하나로 내려받아요. 글, 페이지 구성, 넣은 사진, 사진 위치·크기까지 모두 들어가요. 파일 이름은 <code>웨딩촬영시안_작업파일_신랑_신부_날짜.json</code>처럼 저장돼요.</dd>
+      <dt>작업 파일 불러오기</dt>
+      <dd>저장해 둔 파일을 고르면 그 상태 그대로 돌아와서 이어서 만들 수 있어요. 다른 휴대폰이나 PC에서도 돼요.</dd>
+    </dl>
+    <p class="guide-note">완성한 시안은 꼭 <b>PDF로 저장</b>해 두세요.</p>
+  </div>`;
+$$('.guide-slot').forEach((el) => (el.innerHTML = GUIDE_HTML));
 
 /* ── 시작 ── */
 document.title = CONFIG.brand;
