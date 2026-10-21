@@ -196,7 +196,16 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .slot:hover,.slot:focus-visible{border-color:var(--blue)}
 .slot:hover .slot-add{color:var(--blue-d)}
 .slot:hover:not(.filled) .slot-add::after{content:var(--paste-hint);display:block;margin-top:4px;font-size:10.5px;color:var(--blue-l)}
-.slot.filled{border:0}
+.slot{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.slot.filled{border:0;cursor:grab}
+.slot.drag-src{opacity:.35}
+.slot.drop{outline:2px solid var(--blue);outline-offset:2px;background-color:var(--mist)}
+.slot.moving{outline:2px dashed var(--blue);outline-offset:2px}
+body.photo-dragging,body.photo-dragging *{cursor:grabbing!important;-webkit-user-select:none!important;user-select:none!important}
+body.photo-dragging .slot-add::after{content:none!important}
+.drag-ghost{position:fixed;z-index:120;width:96px;height:120px;pointer-events:none;background:#fff center/cover no-repeat;border-radius:6px;box-shadow:0 12px 30px rgba(20,40,70,.35);transform:translate(-50%,-50%) rotate(-3deg);opacity:.92}
+.move-bar{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:85;display:flex;align-items:center;gap:12px;background:var(--ink);color:#fff;font-size:14px;padding:10px 10px 10px 18px;border-radius:10px;box-shadow:0 12px 30px rgba(20,30,45,.3);max-width:calc(100vw - 24px)}
+.move-bar .btn{height:32px;background:rgba(255,255,255,.12);border-color:transparent;color:#fff}
 .slot.filled .slot-add{display:none}
 .slot.drag{border:1.5px dashed var(--blue);background-color:var(--mist)}
 .slot.broken .slot-add{color:#B4574C}
@@ -389,7 +398,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 
 <!-- 시안 만들기 -->
 <main class="view" id="view-make" hidden>
-  <p class="make-tip no-print"><b>사진 칸</b>을 누르면 사진을 넣을 수 있어요. 복사한 사진은 칸 위에 마우스를 올리고 <b><span class="mod-key">Ctrl</span>+V</b>로 붙여넣으면 돼요. 회색 글씨 자리는 눌러서 바로 입력하면 돼요. 페이지를 누른 뒤 <b>+ 시안 페이지 추가</b>를 누르면 그 페이지 바로 뒤에 새 페이지가 생겨요. 작성한 내용은 이 기기에 자동 저장돼요.</p>
+  <p class="make-tip no-print"><b>사진 칸</b>을 누르면 사진을 넣을 수 있어요. 복사한 사진은 칸 위에 마우스를 올리고 <b><span class="mod-key">Ctrl</span>+V</b>로 붙여넣으면 돼요. 넣은 사진은 <b>끌어서 다른 칸으로</b> 옮길 수 있어요. 회색 글씨 자리는 눌러서 바로 입력하면 돼요. 페이지를 누른 뒤 <b>+ 시안 페이지 추가</b>를 누르면 그 페이지 바로 뒤에 새 페이지가 생겨요. 작성한 내용은 이 기기에 자동 저장돼요.</p>
   <div class="pages" id="pages"></div>
   <div class="make-foot no-print"><button type="button" class="add-big" id="btnAdd2">+ 시안 페이지 추가</button><button type="button" class="btn solid save-big" id="btnPdf2">PDF로 저장</button></div>
   <footer class="credit credit-text no-print"></footer>
@@ -407,6 +416,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 <div class="modal" id="modal" hidden><div class="modal-card" role="dialog" aria-modal="true"><button type="button" class="modal-x" aria-label="닫기">✕</button><div id="modalBody"></div></div></div>
 <div class="busy" id="busy" hidden><div class="spin"></div><p id="busyText">PDF 만드는 중…</p></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="move-bar" id="moveBar" hidden><span>사진을 옮길 칸을 눌러 주세요</span><button type="button" class="btn" id="moveCancel">취소</button></div>
 <input type="file" id="fileInput" accept="image/*" multiple hidden>
 
 <script>
@@ -707,6 +717,7 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft') lbxMove(-1);
     if (e.key === 'ArrowRight') lbxMove(1);
   } else if (!$('#modal').hidden && e.key === 'Escape') closeModal();
+  else if (moveFrom && e.key === 'Escape') cancelMoveMode();
 });
 
 /* ════════════════════════════════════════════
@@ -841,6 +852,7 @@ function labelOf(i) {
 const PLAIN = (() => { const d = document.createElement('div'); try { d.contentEditable = 'plaintext-only'; } catch (e) { /* 지원 안 함 */ } return d.contentEditable === 'plaintext-only'; })();
 
 function renderPages() {
+  if (typeof cancelMoveMode === 'function' && moveFrom) cancelMoveMode();
   const host = $('#pages');
   let cNo = 0;
   const last = doc.pages.length - 1;
@@ -1053,7 +1065,10 @@ pagesEl.addEventListener('click', (e) => {
   const x = e.target.closest('.slot-x');
   if (x) { e.stopPropagation(); const sl = x.closest('.slot'); setSlot(pidOf(sl), sl.dataset.slot, null); gc(); return; }
   const sl = e.target.closest('.slot');
-  if (sl) openSlot(pidOf(sl), sl.dataset.slot);
+  if (!sl) return;
+  if (suppressClick) { suppressClick = false; return; }
+  if (moveFrom) { finishMoveMode(slotRef(sl)); return; }
+  openSlot(pidOf(sl), sl.dataset.slot);
 });
 /* 사진을 끌어다 놓기 */
 pagesEl.addEventListener('dragover', (e) => {
@@ -1139,6 +1154,7 @@ function openSlot(pid, key) {
       ${cur ? '<button type="button" class="btn solid" data-m="done">완료</button>' : ''}
       <button type="button" class="btn${cur ? '' : ' solid'}" data-m="file">${cur ? '다른 사진으로 바꾸기' : '내 기기에서 사진 고르기'}</button>
       <button type="button" class="btn" data-m="paste">복사한 사진 붙여넣기</button>
+      ${cur ? '<button type="button" class="btn" data-m="move">다른 칸으로 옮기기</button>' : ''}
       ${cur ? '<button type="button" class="btn ghost" data-m="remove">사진 빼기</button>' : ''}
     </div>
     ${TOUCH ? '' : `<p class="m-note">이 창이 열린 상태에서 ${MOD}+V를 눌러도 붙여넣어져요.</p>`}
@@ -1152,6 +1168,7 @@ function openSlot(pid, key) {
     if (m === 'contain' || m === 'cover' || m === 'center') { adj && adj.then((f) => f && f(m)); return; }
     if (m === 'done') { closeModal(); return; }
     if (m === 'paste') { pasteFromClipboard(pid, key); return; }
+    if (m === 'move') { closeModal(); startMoveMode({ pid, key }); return; }
     if (m === 'file') { closeModal(); pickFile(pid, key); }
     else if (m === 'remove') { closeModal(); setSlot(pid, key, null); gc(); }
     else if (b.dataset.src) { closeModal(); setSlot(pid, key, { t: 'url', src: b.dataset.src }); gc(); }
@@ -1293,6 +1310,102 @@ async function pasteFromClipboard(pid, key) {
     toast(`붙여넣기를 허용하지 않았어요. ${TOUCH ? '다시 눌러서 허용해 주세요.' : MOD + '+V를 눌러 주세요.'}`);
   }
 }
+
+/* ── 사진 순서 바꾸기 (끌어서 옮기기) ── */
+let suppressClick = false, moveFrom = null;
+const slotElOf = (r) => { const el = pageEl(r.pid); return el ? $(`.slot[data-slot="${r.key}"]`, el) : null; };
+function moveSlot(from, to) {
+  if (!from || !to || (from.pid === to.pid && from.key === to.key)) return false;
+  const pa = getPage(from.pid), pb = getPage(to.pid);
+  if (!pa || !pb || !pa.slots[from.key]) return false;
+  const elA = slotElOf(from), elB = slotElOf(to);
+  // 칸 모양이 달라도 위치·크기 조절 값이 어긋나지 않게 칸 비율을 새로 맞춰요
+  const fit = (v, el) => {
+    if (!v) return null;
+    const n = { ...v };
+    if (n.z && el && el.offsetHeight) n.sa = el.offsetWidth / el.offsetHeight;
+    return n;
+  };
+  const a = fit(pa.slots[from.key], elB);
+  const b = fit(pb.slots[to.key], elA);
+  if (b) pa.slots[from.key] = b; else delete pa.slots[from.key];
+  pb.slots[to.key] = a;
+  if (elA) paintSlot(elA, pa.slots[from.key]);
+  if (elB) paintSlot(elB, pb.slots[to.key]);
+  scheduleSave();
+  return true;
+}
+
+let drag = null;
+pagesEl.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'touch' || e.button !== 0 || moveFrom) return;
+  const sl = e.target.closest('.slot');
+  if (!sl || !sl.classList.contains('filled') || e.target.closest('.slot-x')) return;
+  e.preventDefault();
+  drag = { el: sl, from: slotRef(sl), x: e.clientX, y: e.clientY, id: e.pointerId, on: false, over: null, ghost: null };
+});
+window.addEventListener('pointermove', (e) => {
+  if (!drag || e.pointerId !== drag.id) return;
+  if (!drag.on) {
+    if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
+    drag.on = true;
+    const g = document.createElement('div');
+    g.className = 'drag-ghost';
+    g.style.backgroundImage = drag.el.style.backgroundImage;
+    document.body.appendChild(g);
+    drag.ghost = g;
+    drag.el.classList.add('drag-src');
+    document.body.classList.add('photo-dragging');
+    if (window.getSelection) window.getSelection().removeAllRanges();
+  }
+  drag.ghost.style.left = e.clientX + 'px';
+  drag.ghost.style.top = e.clientY + 'px';
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  const t = under && under.closest ? under.closest('#pages .slot') : null;
+  if (drag.over && drag.over !== t) drag.over.classList.remove('drop');
+  drag.over = t && t !== drag.el ? t : null;
+  if (drag.over) drag.over.classList.add('drop');
+  // 화면 끝으로 가면 자동으로 스크롤
+  const top = $('.hdr').offsetHeight;
+  if (e.clientY < top + 50) window.scrollBy(0, -14);
+  else if (e.clientY > window.innerHeight - 50) window.scrollBy(0, 14);
+});
+function endDrag(e, cancel) {
+  if (!drag || (e && e.pointerId !== drag.id)) return;
+  const d = drag;
+  drag = null;
+  if (!d.on) return;
+  d.ghost.remove();
+  d.el.classList.remove('drag-src');
+  document.body.classList.remove('photo-dragging');
+  if (d.over) d.over.classList.remove('drop');
+  suppressClick = true;
+  setTimeout(() => { suppressClick = false; }, 300);
+  if (!cancel && d.over && moveSlot(d.from, slotRef(d.over))) toast('사진 자리를 옮겼어요.');
+}
+window.addEventListener('pointerup', (e) => endDrag(e, false));
+window.addEventListener('pointercancel', (e) => endDrag(e, true));
+
+/* 휴대폰: 사진 조절 창의 '다른 칸으로 옮기기' → 옮길 칸 누르기 */
+function startMoveMode(from) {
+  moveFrom = from;
+  const el = slotElOf(from);
+  if (el) el.classList.add('moving');
+  $('#moveBar').hidden = false;
+}
+function cancelMoveMode() {
+  if (!moveFrom) return;
+  const el = slotElOf(moveFrom);
+  if (el) el.classList.remove('moving');
+  moveFrom = null;
+  $('#moveBar').hidden = true;
+}
+function finishMoveMode(to) {
+  const from = moveFrom;
+  cancelMoveMode();
+  if (to && moveSlot(from, to)) toast('사진 자리를 옮겼어요.');
+}
+$('#moveCancel').addEventListener('click', cancelMoveMode);
 
 /* 페이지 추가 */
 function openAddMenu() {
