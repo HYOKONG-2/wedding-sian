@@ -1,0 +1,8 @@
+// Cloudflare 설정: build.js가 만든 dist 폴더를 사이트로 올려요.
+{
+  "name": "wedding-sian",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./dist"
+  }
+}
