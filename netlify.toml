@@ -1,0 +1,7 @@
+# Netlify가 배포할 때마다 '시안사진' 폴더를 읽어 사진 목록을 새로 만들어요.
+[build]
+  command = "node build.js"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
