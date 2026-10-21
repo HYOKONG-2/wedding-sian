@@ -71,14 +71,15 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .home-sub{color:var(--muted);font-size:16px;line-height:1.75;margin:0;max-width:26em}
 .choices{display:grid;grid-template-columns:1fr 1fr;gap:40px}
 .choice{display:block;text-decoration:none;color:inherit}
-.mini{position:relative;aspect-ratio:297/210;background:#fff;outline:1px solid var(--line);transition:transform .35s ease,box-shadow .35s ease}
+.mini{position:relative;aspect-ratio:297/210;overflow:hidden;background:#fff;outline:1px solid var(--line);transition:transform .35s ease,box-shadow .35s ease}
 .choice:hover .mini,.choice:focus-visible .mini{transform:translateY(-4px);box-shadow:0 24px 44px -28px rgba(44,58,72,.45)}
 .mini-f{position:absolute;inset:4.2%;border:1px solid var(--ink);padding:4.5% 4.5% 4%;display:flex;flex-direction:column;gap:5%}
 .mini-h{display:flex;align-items:baseline;gap:6%;border-bottom:1px solid var(--ink);padding-bottom:3%}
 .mini-h b{font-family:var(--en);font-weight:500;font-size:clamp(8px,1.05vw,11px);letter-spacing:.16em;color:var(--blue)}
 .mini-h span{font-weight:600;font-size:clamp(11px,1.5vw,16px);color:var(--ink)}
 .mini-g{flex:1;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(2,minmax(0,1fr));gap:4%;min-height:0}
-.mini-g span,.mini-g img{display:block;width:100%;height:100%;object-fit:cover;background:var(--mist);min-height:0}
+.mini-g span{position:relative;display:block;overflow:hidden;background:var(--mist);min-height:0;min-width:0}
+.mini-g img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover}
 .mini-g span:nth-child(3n){background:#E3EAF0}
 .mini-c{flex:1;display:grid;grid-template-columns:.72fr 1fr;gap:5%;min-height:0}
 .mini-c .l{display:grid;grid-template-rows:auto 1.5fr 1fr;gap:6%}
@@ -273,7 +274,7 @@ body.photo-dragging .slot-add::after{content:none!important}
 .m-sub.muted{font-weight:400;color:var(--muted);line-height:1.6}
 .m-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .m-ph{aspect-ratio:3/4;border:0;padding:0;background:var(--mist);cursor:pointer;overflow:hidden;position:relative}
-.m-ph img{width:100%;height:100%;object-fit:cover;display:block}
+.m-ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .m-ph.used::after{content:"사용 중";position:absolute;left:5px;bottom:5px;font-size:10.5px;background:rgba(255,255,255,.95);color:var(--blue-d);padding:2px 6px;border-radius:4px}
 .m-ph:hover{outline:2px solid var(--blue);outline-offset:-2px}
 .adj{position:relative;overflow:hidden;display:flex;justify-content:center;align-items:center;background:var(--mist);padding:14px;border-radius:8px}
@@ -284,6 +285,10 @@ body.photo-dragging .slot-add::after{content:none!important}
 .adj-zoom input{flex:1;accent-color:var(--blue);height:24px}
 .adj-quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
 .adj-quick .btn{height:34px;font-size:12.5px;padding:0 12px}
+.work-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
+.work-acts .btn{height:48px;justify-content:center;font-size:14px}
+.work-list{margin:16px 0 0;padding:14px 16px;border-radius:8px;background:var(--mist);font-size:13px;color:var(--text);line-height:1.75}
+.work-list b{color:var(--blue-d)}
 .add-list{display:grid;gap:6px}
 .add-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:8px;padding:13px 16px;cursor:pointer}
 .add-item:hover{border-color:var(--blue);background:var(--mist-2)}
@@ -341,6 +346,7 @@ body.photo-dragging .slot-add::after{content:none!important}
       <button type="button" class="btn" id="btnAdd">+ 시안 페이지 추가</button>
       <button type="button" class="btn" id="btnPrint">인쇄</button>
       <button type="button" class="btn solid" id="btnPdf">PDF로 저장</button>
+      <button type="button" class="btn" id="btnWork">작업 파일</button>
       <button type="button" class="btn ghost" id="btnReset">처음부터</button>
     </nav>
   </div>
@@ -398,7 +404,7 @@ body.photo-dragging .slot-add::after{content:none!important}
 
 <!-- 시안 만들기 -->
 <main class="view" id="view-make" hidden>
-  <p class="make-tip no-print"><b>사진 칸</b>을 누르면 사진을 넣을 수 있어요. 복사한 사진은 칸 위에 마우스를 올리고 <b><span class="mod-key">Ctrl</span>+V</b>로 붙여넣으면 돼요. 넣은 사진은 <b>끌어서 다른 칸으로</b> 옮길 수 있어요. 회색 글씨 자리는 눌러서 바로 입력하면 돼요. 페이지를 누른 뒤 <b>+ 시안 페이지 추가</b>를 누르면 그 페이지 바로 뒤에 새 페이지가 생겨요. 작성한 내용은 이 기기에 자동 저장돼요.</p>
+  <p class="make-tip no-print"><b>사진 칸</b>을 누르면 사진을 넣을 수 있어요. 복사한 사진은 칸 위에 마우스를 올리고 <b><span class="mod-key">Ctrl</span>+V</b>로 붙여넣으면 돼요. 넣은 사진은 <b>끌어서 다른 칸으로</b> 옮길 수 있어요. 회색 글씨 자리는 눌러서 바로 입력하면 돼요. 페이지를 누른 뒤 <b>+ 시안 페이지 추가</b>를 누르면 그 페이지 바로 뒤에 새 페이지가 생겨요. 작성한 내용은 이 기기·이 브라우저에 자동 저장돼서 창을 닫아도 그대로 남아요. 다른 기기에서 이어 하거나 따로 보관하고 싶으면 <b>작업 파일</b>로 저장해 두세요.</p>
   <div class="pages" id="pages"></div>
   <div class="make-foot no-print"><button type="button" class="add-big" id="btnAdd2">+ 시안 페이지 추가</button><button type="button" class="btn solid save-big" id="btnPdf2">PDF로 저장</button></div>
   <footer class="credit credit-text no-print"></footer>
@@ -418,6 +424,7 @@ body.photo-dragging .slot-add::after{content:none!important}
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="move-bar" id="moveBar" hidden><span>사진을 옮길 칸을 눌러 주세요</span><button type="button" class="btn" id="moveCancel">취소</button></div>
 <input type="file" id="fileInput" accept="image/*" multiple hidden>
+<input type="file" id="workInput" accept=".json,application/json" hidden>
 
 <script>
 (() => {
@@ -599,7 +606,7 @@ function renderHome() {
   const pool = allPhotos.slice();
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
   box.innerHTML = Array.from({ length: 8 }, (_, i) => pool[i]
-    ? `<img src="${imgUrl(pool[i].src, 240)}" data-orig="${esc(pool[i].src)}" alt="" loading="lazy">`
+    ? `<span><img src="${imgUrl(pool[i].src, 240)}" data-orig="${esc(pool[i].src)}" alt="" loading="lazy"></span>`
     : '<span></span>').join('');
 }
 
@@ -1435,6 +1442,105 @@ function addPage(type, pool) {
 }
 $('#btnAdd').addEventListener('click', openAddMenu);
 $('#btnAdd2').addEventListener('click', openAddMenu);
+
+/* ── 작업 파일: 저장해 두었다가 나중에(다른 기기에서도) 이어서 하기 ── */
+function blobToDataURL(b) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
+}
+async function dataURLToBlob(u) { return (await fetch(u)).blob(); }
+
+function openWorkMenu() {
+  openModal(`<h3>작업 파일</h3>
+    <p class="m-hint">지금까지 만든 시안을 파일 하나로 저장해 두고, 나중에 불러와서 이어서 만들 수 있어요.</p>
+    <div class="work-acts">
+      <button type="button" class="btn solid" data-w="save">작업 파일 저장하기</button>
+      <button type="button" class="btn" data-w="load">작업 파일 불러오기</button>
+    </div>
+    <div class="work-list">
+      · 글, 페이지 구성, 넣은 사진, 사진 위치까지 모두 들어가요.<br>
+      · <b>다른 기기</b>나 <b>다른 브라우저</b>에서도 불러올 수 있어요.<br>
+      · 파일은 내 기기에만 저장돼요. 카톡 나에게 보내기 등으로 옮겨서 쓰면 편해요.<br>
+      · 다 만든 뒤에는 <b>PDF로 저장</b>도 꼭 해 두세요.
+    </div>`);
+  $('#modalBody').onclick = (e) => {
+    const b = e.target.closest('[data-w]'); if (!b) return;
+    if (b.dataset.w === 'save') { closeModal(); saveWorkFile(); }
+    if (b.dataset.w === 'load') { closeModal(); const i = $('#workInput'); i.value = ''; i.click(); }
+  };
+}
+
+async function saveWorkFile() {
+  busy.hidden = false;
+  $('#busyText').textContent = '작업 파일 만드는 중…';
+  try {
+    save();
+    const images = {};
+    for (const p of doc.pages) {
+      for (const v of Object.values(p.slots)) {
+        if (!v || v.t !== 'idb' || images[v.id]) continue;
+        let b = mem.get(v.id);
+        if (!b) { try { b = await idb.get(v.id); } catch (e) { b = null; } }
+        if (b) images[v.id] = await blobToDataURL(b);
+      }
+    }
+    const data = { app: 'wedding-sian', v: 1, savedAt: new Date().toISOString(), doc, images };
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const d = new Date();
+    const stamp = `${String(d.getFullYear()).slice(2)}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+    const names = [doc.meta.groom, doc.meta.bride].filter(Boolean).join('_');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${CONFIG.pdfName}_작업파일${names ? '_' + names : ''}_${stamp}.json`.replace(/[\\/:*?"<>|]/g, '');
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast('작업 파일을 저장했어요. 나중에 [작업 파일 → 불러오기]로 이어서 만들 수 있어요.');
+  } catch (e) {
+    console.error(e);
+    toast('작업 파일을 만들지 못했어요. 다시 시도해 주세요.');
+  } finally {
+    busy.hidden = true;
+  }
+}
+
+$('#workInput').addEventListener('change', async () => {
+  const f = $('#workInput').files[0];
+  if (!f) return;
+  let data;
+  try { data = JSON.parse(await f.text()); } catch (e) { data = null; }
+  if (!data || data.app !== 'wedding-sian' || !data.doc || !Array.isArray(data.doc.pages)) {
+    toast('이 사이트에서 저장한 작업 파일이 아니에요.');
+    return;
+  }
+  const when = data.savedAt ? new Date(data.savedAt).toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }) : '';
+  if (!confirm(`작업 파일을 불러올까요?${when ? '\n(' + when + '에 저장한 파일)' : ''}\n\n지금 화면에 있는 내용은 불러온 내용으로 바뀌어요.`)) return;
+  busy.hidden = false;
+  $('#busyText').textContent = '작업 파일 불러오는 중…';
+  try {
+    try { await idb.clear(); } catch (e) { /* 무시 */ }
+    mem.clear();
+    urlCache.forEach((u) => URL.revokeObjectURL(u));
+    urlCache.clear();
+    for (const [id, u] of Object.entries(data.images || {})) {
+      if (typeof u === 'string' && u.startsWith('data:image/')) await putBlob(id, await dataURLToBlob(u));
+    }
+    doc = data.doc;
+    doc.meta = doc.meta || {};
+    doc.pages = doc.pages.filter((p) => p && TPL[p.type]).map((p) => ({ id: p.id || uid(), type: p.type, data: p.data || {}, slots: p.slots || {} }));
+    selPid = null;
+    save();
+    renderPages();
+    window.scrollTo(0, 0);
+    toast('작업 파일을 불러왔어요. 이어서 만들면 돼요.');
+  } catch (e) {
+    console.error(e);
+    toast('작업 파일을 불러오지 못했어요.');
+  } finally {
+    busy.hidden = true;
+  }
+});
+$('#btnWork').addEventListener('click', openWorkMenu);
 
 /* 처음부터 */
 $('#btnReset').addEventListener('click', async () => {
